@@ -674,23 +674,22 @@ $labelFilePath.Text="$PSScriptRoot\users.csv"
  ##################           TESTING         ############################
 
 $btnsetpin.Add_Click({
-    # Neues Fenster
+
     $pinForm = New-Object System.Windows.Forms.Form
-    $pinForm.Text = "PIN setzen"
+    $pinForm.Text = "Set PIN"
     $pinForm.Size = New-Object System.Drawing.Size(300,220)
     $pinForm.StartPosition = "CenterScreen"
 
     $lblNew = New-Object System.Windows.Forms.Label
-    $lblNew.Text = "Neuer PIN:"
+    $lblNew.Text = "New PIN:"
     $lblNew.Location = New-Object System.Drawing.Point(10,60)
     $lblNew.AutoSize = $true
 
     $lblConfirm = New-Object System.Windows.Forms.Label
-    $lblConfirm.Text = "Neuen PIN bestätigen:"
+    $lblConfirm.Text = "Confirm New PIN:"
     $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
     $lblConfirm.AutoSize = $true
 
-    # Textfelder
     $txtNew = New-Object System.Windows.Forms.TextBox
     $txtNew.Location = New-Object System.Drawing.Point(150,58)
     $txtNew.Width = 120
@@ -703,27 +702,27 @@ $btnsetpin.Add_Click({
 
     # OK Button
     $btnOK = New-Object System.Windows.Forms.Button
-    $btnOK.Text = "Bestätigen"
+    $btnOK.Text = "Confirm"
     $btnOK.Location = New-Object System.Drawing.Point(50,140)
     $btnOK.Width = 80
 
-    # Abbrechen Button
+    # Cancel Button
     $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Abbrechen"
+    $btnCancel.Text = "Cancel"
     $btnCancel.Location = New-Object System.Drawing.Point(150,140)
     $btnCancel.Width = 80
 
-    # OK Klick
+    # OK Click
     $btnOK.Add_Click({
 
         if ($txtNew.Text -ne $txtConfirm.Text) {
-            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
+            [System.Windows.Forms.MessageBox]::Show("The new PINs do not match.","Error")
             return
         }
 
         $newPin = $txtNew.Text
 
-        Write-Host "Neuer PIN: $newPin"
+        Write-Host "New PIN: $newPin"
 
         try {
 
@@ -743,8 +742,8 @@ $btnsetpin.Add_Click({
         if ($process.ExitCode -eq 0) {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN wurde erfolgreich gesetzt.",
-                "Erfolg",
+                "PIN was successfully set.",
+                "Success",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
@@ -754,8 +753,8 @@ $btnsetpin.Add_Click({
         } else {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
-                "Fehler",
+                "PIN could not be changed.`n`nError:`n$error",
+                "Error",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
@@ -765,8 +764,8 @@ $btnsetpin.Add_Click({
     } catch {
 
         [System.Windows.Forms.MessageBox]::Show(
-            "Fehler beim Ausführen von ykman:`n$_",
-            "Script Fehler",
+            "Error occurred while executing ykman:`n$_",
+            "Script Error",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         )
@@ -774,7 +773,7 @@ $btnsetpin.Add_Click({
     }
     })
 
-    # Cancel Klick
+    # Cancel Click
     $btnCancel.Add_Click({
         $pinForm.Close()
     })
@@ -818,29 +817,26 @@ $btnreset.Add_Click({
 })
 
 $btnchangepin.Add_Click({
-        # Neues Fenster
     $pinForm = New-Object System.Windows.Forms.Form
-    $pinForm.Text = "PIN ändern"
+    $pinForm.Text = "Change PIN"
     $pinForm.Size = New-Object System.Drawing.Size(300,220)
     $pinForm.StartPosition = "CenterScreen"
 
-    # Labels
     $lblCurrent = New-Object System.Windows.Forms.Label
-    $lblCurrent.Text = "Aktueller PIN:"
+    $lblCurrent.Text = "Current PIN:"
     $lblCurrent.Location = New-Object System.Drawing.Point(10,20)
     $lblCurrent.AutoSize = $true
 
     $lblNew = New-Object System.Windows.Forms.Label
-    $lblNew.Text = "Neuer PIN:"
+    $lblNew.Text = "New PIN:"
     $lblNew.Location = New-Object System.Drawing.Point(10,60)
     $lblNew.AutoSize = $true
 
     $lblConfirm = New-Object System.Windows.Forms.Label
-    $lblConfirm.Text = "Neuen PIN bestätigen:"
+    $lblConfirm.Text = "Confirm New PIN:"
     $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
     $lblConfirm.AutoSize = $true
 
-    # Textfelder
     $txtCurrent = New-Object System.Windows.Forms.TextBox
     $txtCurrent.Location = New-Object System.Drawing.Point(150,18)
     $txtCurrent.Width = 120
@@ -858,29 +854,29 @@ $btnchangepin.Add_Click({
 
     # OK Button
     $btnOK = New-Object System.Windows.Forms.Button
-    $btnOK.Text = "Bestätigen"
+    $btnOK.Text = "Confirm"
     $btnOK.Location = New-Object System.Drawing.Point(50,140)
     $btnOK.Width = 80
 
-    # Abbrechen Button
+    # Cancel Button
     $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Abbrechen"
+    $btnCancel.Text = "Cancel"
     $btnCancel.Location = New-Object System.Drawing.Point(150,140)
     $btnCancel.Width = 80
 
-    # OK Klick
+    # OK Click
     $btnOK.Add_Click({
 
         if ($txtNew.Text -ne $txtConfirm.Text) {
-            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
+            [System.Windows.Forms.MessageBox]::Show("The new PINs do not match.","Error")
             return
         }
 
         $currentPin = $txtCurrent.Text
         $newPin = $txtNew.Text
 
-        Write-Host "Aktueller PIN: $currentPin"
-        Write-Host "Neuer PIN: $newPin"
+        Write-Host "Current PIN: $currentPin"
+        Write-Host "New PIN: $newPin"
 
         try {
 
@@ -900,8 +896,8 @@ $btnchangepin.Add_Click({
         if ($process.ExitCode -eq 0) {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN wurde erfolgreich geändert.",
-                "Erfolg",
+                "PIN was successfully changed.",
+                "Success",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
@@ -911,8 +907,8 @@ $btnchangepin.Add_Click({
         } else {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
-                "Fehler",
+                "PIN could not be changed.`n`nError:`n$error",
+                "Error",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
@@ -922,8 +918,8 @@ $btnchangepin.Add_Click({
     } catch {
 
         [System.Windows.Forms.MessageBox]::Show(
-            "Fehler beim Ausführen von ykman:`n$_",
-            "Script Fehler",
+            "Error occurred while executing ykman:`n$_",
+            "Script Error",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         )
@@ -931,7 +927,7 @@ $btnchangepin.Add_Click({
     }
     })
 
-    # Cancel Klick
+    # Cancel Click
     $btnCancel.Add_Click({
         $pinForm.Close()
     })
@@ -943,7 +939,7 @@ $btnchangepin.Add_Click({
         $btnOK,$btnCancel
     ))
 
-    # Fenster anzeigen
+    # Show window
     $pinForm.ShowDialog()
 
 })
@@ -1158,7 +1154,7 @@ $btnProceed.Add_Click({
     } catch {
         Write-Host "An error occurred: $($_)"
         [System.Windows.Forms.MessageBox]::Show("An error occurred: $($_)", "Error")
-    }finally { #autom Logout von Graph
+    }finally { #autom Logout from Graph
     Disconnect-MgGraph
     Write-Host "Disconnected from Microsoft Graph."
     }
