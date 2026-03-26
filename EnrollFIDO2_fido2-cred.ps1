@@ -1,4 +1,21 @@
-$samplepin = '1234587'
+$samplepin = '1234'
+# Ensure PowerShell 7 and Admin rights
+$needsRestart = $false
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Host "PowerShell 7 required. Restarting..."
+    $needsRestart = $true
+}
+$isAdmin = ([Security.Principal.WindowsPrincipal] `
+    [Security.Principal.WindowsIdentity]::GetCurrent() `
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "Administrator rights required. Restarting..."
+    $needsRestart = $true
+}
+if ($needsRestart) {
+    Start-Process pwsh -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
 
 
 ###region utility functions
@@ -38,7 +55,7 @@ function ConvertTo-Base64Url {
     }
 }
 
-#https://stackoverflow.com/a/10939609 (changed to only allow integers
+#https://stackoverflow.com/a/10939609 (changed to only allow integers)
 function Is-Numeric ($Value) {
     return $Value -match "^[\d]+$"
 }
@@ -146,7 +163,7 @@ function build-att-object($sig, $authdata, $x5c, $alg="es256") {
 	#currently no support for Intermediates, therefore a fixed array of 1
 	$cbor += cbor-build-len $array 1
 	$cbor += cbor-build-bytes($x5c)
-	#authdata (already with cbor typing and length data, so can just b64 decode and append, after the label
+	#authdata (already with cbor typing and length data, so can just b64 decode and append, after the label)
 	$cbor += cbor-build-text("authData")
 	$cbor += [System.Convert]::FromBase64String($authdata)
 	#convert everything to Base64 for sending out
@@ -350,7 +367,7 @@ function CTAP-Create-Custom-Passkey
 			
 			
 			#prepare clientDataHash(base64), RPID, Username and user ID(base64) as Inputs for fido2-cred
-			$input= $clientdatahash + "`n" + $rpid + "`n" + $uname + "`n" + $uid + "`n"
+			$inputt= $clientdatahash + "`n" + $rpid + "`n" + $uname + "`n" + $uid + "`n"
 			
             # Keep the current output encoding in a variable
             $oldEncoding = [console]::OutputEncoding
@@ -358,7 +375,7 @@ function CTAP-Create-Custom-Passkey
             [console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
 
             #modded for nfc and pin, pipe in inputs as UTF-8 to avoid writing unneeded files
-            $cred = $input | & ".\fido2-cred2.exe" $cli.split()
+            $cred = $inputt | & ".\fido2-cred2.exe" $cli.split()
 
             [console]::OutputEncoding = $oldEncoding
 			#create array from the outputs and extract authenticator data, signature and attestation certificate (x5c) to manually build attestation object
@@ -447,7 +464,7 @@ $logFilePath = "provisioning.log"
 $regPath = "HKCU:\Software\Token2BulkFido"
  
 $propertyName = "TenantId"
-$defaultValue = "token2.onmicrosoft.com"  # Replace with the default value you want
+$defaultValue = "customer.onmicrosoft.com"  # Replace with the default value you want
 
 # Check if the registry path exists
 if (-not (Test-Path $regPath)) {
@@ -465,11 +482,26 @@ try {
     Write-Output "Property '$propertyName' created with value: $defaultValue"
 }
 
+#Hide Powershell Window in Background
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr GetConsoleWindow();
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+"@
+$consolePtr = [Win32]::GetConsoleWindow()
+[Win32]::ShowWindow($consolePtr, 0)
+
+
 # Create the main form
 $form = New-Object System.Windows.Forms.Form
 
-$form.Text = "FIDO Key Registration"
-$form.Size = New-Object System.Drawing.Size(500, 350)
+$form.Text = "FIDO Key Provisioning"
+$form.Size = New-Object System.Drawing.Size(550, 550)
 $form.StartPosition = "CenterScreen"
 
 # Create a label and text box for Tenant ID input
@@ -482,6 +514,17 @@ $textTenantId = New-Object System.Windows.Forms.TextBox
 $textTenantId.Location = New-Object System.Drawing.Point(150, 20)
 $textTenantId.Width = 300
 $form.Controls.Add($textTenantId)
+
+# Retrieve UPN of one user
+$labelUPN = New-Object System.Windows.Forms.Label
+$labelUPN.Text = "Enter User UPN:"
+$labelUPN.Location = New-Object System.Drawing.Point(20, 45)
+$form.Controls.Add($labelUPN)
+
+$textUPN = New-Object System.Windows.Forms.TextBox
+$textUPN.Location = New-Object System.Drawing.Point(150, 45)
+$textUPN.Width = 300
+$form.Controls.Add($textUPN)
 
 # Retrieve Tenant Name from Registry
 if (-not (Test-Path $regPath)) {
@@ -500,13 +543,13 @@ if (-not (Test-Path $regPath)) {
 # Create a button to select the CSV or text file
 $btnSelectFile = New-Object System.Windows.Forms.Button
 $btnSelectFile.Text = "Select File"
-$btnSelectFile.Location = New-Object System.Drawing.Point(20, 60)
+$btnSelectFile.Location = New-Object System.Drawing.Point(20, 70)
 $form.Controls.Add($btnSelectFile)
 
 # Create a label to display the selected file path
 $labelFilePath = New-Object System.Windows.Forms.Label
 $labelFilePath.AutoSize = $true
-$labelFilePath.Location = New-Object System.Drawing.Point(150, 65)
+$labelFilePath.Location = New-Object System.Drawing.Point(150, 70)
 $labelFilePath.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($labelFilePath)
 
@@ -572,10 +615,10 @@ $btnSetLogFile.Add_Click({
 
 # Define the Instruction Label
 $lblInstruction = New-Object System.Windows.Forms.Label
-$lblInstruction.Text = "plug the first user's key before proceeding`n(or use NFC for fewer interactions)"
+$lblInstruction.Text = "(plug in the first user's key before proceeding)"
 $lblInstruction.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 10)
 $lblInstruction.AutoSize = $true
-$lblInstruction.Location = New-Object System.Drawing.Point(20, 220)
+$lblInstruction.Location = New-Object System.Drawing.Point(20, 245)
 $form.Controls.Add($lblInstruction)
 
 # Define Proceed button logic
@@ -583,21 +626,339 @@ $btnProceed = New-Object System.Windows.Forms.Button
 $btnProceed.Text = "Proceed"
 $btnProceed.Width = 200
 $btnProceed.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 12)
-$btnProceed.Location = New-Object System.Drawing.Point(20, 260)  # Adjusted lower than the label
+$btnProceed.Location = New-Object System.Drawing.Point(20, 220)  # Adjusted lower than the label
 $form.Controls.Add($btnProceed)
 
-         ##################           TESTING         ############################
-		 $labelFilePath.Text="$PSScriptRoot\users.csv"
+# Define ChangePIN button logic
+$btnchangepin = New-Object System.Windows.Forms.Button
+$btnchangepin.Text = "Change Pin"
+$btnchangepin.Width = 200
+$btnchangepin.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 12)
+$btnchangepin.Location = New-Object System.Drawing.Point(300, 220)  
+$form.Controls.Add($btnchangepin)
+
+# Define Reset Button Logic
+$btnreset = New-Object System.Windows.Forms.Button
+$btnreset.Text = "Reset Yubikey"
+$btnreset.Width = 200
+$btnreset.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 12)
+$btnreset.Location = New-Object System.Drawing.Point(20, 300)  
+$form.Controls.Add($btnreset)
+
+$resetInstruction = New-Object System.Windows.Forms.Label
+$resetInstruction.Text = "(Reset can only be triggered within 5 seconds after the YubiKey is inserted.)"
+$resetInstruction.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 9)
+$resetInstruction.AutoSize = $true
+$resetInstruction.Location = New-Object System.Drawing.Point(20, 325)
+$form.Controls.Add($resetInstruction)
+
+# Define Set Pin Button Logic
+$btnsetpin = New-Object System.Windows.Forms.Button
+$btnsetpin.Text = "Set Pin"
+$btnsetpin.Width = 200
+$btnsetpin.Font = New-Object System.Drawing.Font('Microsoft Sans Serif', 12)
+$btnsetpin.Location = New-Object System.Drawing.Point(300, 300)  
+$form.Controls.Add($btnsetpin)
+
+#Output Box
+$outputBox = New-Object System.Windows.Forms.TextBox
+$outputBox.Multiline = $true
+$outputBox.ScrollBars = "Vertical"
+$outputBox.Width = 500
+$outputBox.Height = 150
+$outputBox.Location = New-Object System.Drawing.Point(20, 350)
+$form.Controls.Add($outputBox)
+
+ ##################           TESTING         ############################
+$labelFilePath.Text="$PSScriptRoot\users.csv"
+ ##################           TESTING         ############################
+
+$btnsetpin.Add_Click({
+    # Neues Fenster
+    $pinForm = New-Object System.Windows.Forms.Form
+    $pinForm.Text = "PIN setzen"
+    $pinForm.Size = New-Object System.Drawing.Size(300,220)
+    $pinForm.StartPosition = "CenterScreen"
+
+    $lblNew = New-Object System.Windows.Forms.Label
+    $lblNew.Text = "Neuer PIN:"
+    $lblNew.Location = New-Object System.Drawing.Point(10,60)
+    $lblNew.AutoSize = $true
+
+    $lblConfirm = New-Object System.Windows.Forms.Label
+    $lblConfirm.Text = "Neuen PIN bestätigen:"
+    $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
+    $lblConfirm.AutoSize = $true
+
+    # Textfelder
+    $txtNew = New-Object System.Windows.Forms.TextBox
+    $txtNew.Location = New-Object System.Drawing.Point(150,58)
+    $txtNew.Width = 120
+    $txtNew.UseSystemPasswordChar = $true
+
+    $txtConfirm = New-Object System.Windows.Forms.TextBox
+    $txtConfirm.Location = New-Object System.Drawing.Point(150,98)
+    $txtConfirm.Width = 120
+    $txtConfirm.UseSystemPasswordChar = $true
+
+    # OK Button
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "Bestätigen"
+    $btnOK.Location = New-Object System.Drawing.Point(50,140)
+    $btnOK.Width = 80
+
+    # Abbrechen Button
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Abbrechen"
+    $btnCancel.Location = New-Object System.Drawing.Point(150,140)
+    $btnCancel.Width = 80
+
+    # OK Klick
+    $btnOK.Add_Click({
+
+        if ($txtNew.Text -ne $txtConfirm.Text) {
+            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
+            return
+        }
+
+        $newPin = $txtNew.Text
+
+        Write-Host "Neuer PIN: $newPin"
+
+        try {
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "ykman.exe"
+        $psi.Arguments = "fido access change-pin --new-pin $newPin"
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $psi
+        $process.Start() | Out-Null
+        $process.WaitForExit()
+
+        if ($process.ExitCode -eq 0) {
+
+            [System.Windows.Forms.MessageBox]::Show(
+                "PIN wurde erfolgreich gesetzt.",
+                "Erfolg",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+
+            $pinForm.Close()
+
+        } else {
+
+            [System.Windows.Forms.MessageBox]::Show(
+                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
+                "Fehler",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+
+        }
+
+    } catch {
+
+        [System.Windows.Forms.MessageBox]::Show(
+            "Fehler beim Ausführen von ykman:`n$_",
+            "Script Fehler",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+
+    }
+    })
+
+    # Cancel Klick
+    $btnCancel.Add_Click({
+        $pinForm.Close()
+    })
+
+    # Controls hinzufügen
+    $pinForm.Controls.AddRange(@(
+        $lblCurrent,$lblNew,$lblConfirm,
+        $txtCurrent,$txtNew,$txtConfirm,
+        $btnOK,$btnCancel
+    ))
+
+    # Fenster anzeigen
+    $pinForm.ShowDialog()
+
+})
+
+# Reset Button Call
+$btnreset.Add_Click({
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo.FileName = "cmd.exe"
+    $process.StartInfo.Arguments = "/c ykman fido reset -f"
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.CreateNoWindow = $true
+
+    $outputBox.AppendText("Waiting for YubiKey touch...`r`n")
+    $process.Start()
+    
+    $process.WaitForExit()
+
+    $exitCode = $process.ExitCode
+
+    if ($exitCode -eq 0) {
+        $outputBox.AppendText("SUCCESS: YubiKey reset completed.`r`n")
+    }
+    else {
+        $outputBox.AppendText("ERROR: YubiKey reset failed.`r`n")
+    }
+
+})
+
+$btnchangepin.Add_Click({
+        # Neues Fenster
+    $pinForm = New-Object System.Windows.Forms.Form
+    $pinForm.Text = "PIN ändern"
+    $pinForm.Size = New-Object System.Drawing.Size(300,220)
+    $pinForm.StartPosition = "CenterScreen"
+
+    # Labels
+    $lblCurrent = New-Object System.Windows.Forms.Label
+    $lblCurrent.Text = "Aktueller PIN:"
+    $lblCurrent.Location = New-Object System.Drawing.Point(10,20)
+    $lblCurrent.AutoSize = $true
+
+    $lblNew = New-Object System.Windows.Forms.Label
+    $lblNew.Text = "Neuer PIN:"
+    $lblNew.Location = New-Object System.Drawing.Point(10,60)
+    $lblNew.AutoSize = $true
+
+    $lblConfirm = New-Object System.Windows.Forms.Label
+    $lblConfirm.Text = "Neuen PIN bestätigen:"
+    $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
+    $lblConfirm.AutoSize = $true
+
+    # Textfelder
+    $txtCurrent = New-Object System.Windows.Forms.TextBox
+    $txtCurrent.Location = New-Object System.Drawing.Point(150,18)
+    $txtCurrent.Width = 120
+    $txtCurrent.UseSystemPasswordChar = $true
+
+    $txtNew = New-Object System.Windows.Forms.TextBox
+    $txtNew.Location = New-Object System.Drawing.Point(150,58)
+    $txtNew.Width = 120
+    $txtNew.UseSystemPasswordChar = $true
+
+    $txtConfirm = New-Object System.Windows.Forms.TextBox
+    $txtConfirm.Location = New-Object System.Drawing.Point(150,98)
+    $txtConfirm.Width = 120
+    $txtConfirm.UseSystemPasswordChar = $true
+
+    # OK Button
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "Bestätigen"
+    $btnOK.Location = New-Object System.Drawing.Point(50,140)
+    $btnOK.Width = 80
+
+    # Abbrechen Button
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Abbrechen"
+    $btnCancel.Location = New-Object System.Drawing.Point(150,140)
+    $btnCancel.Width = 80
+
+    # OK Klick
+    $btnOK.Add_Click({
+
+        if ($txtNew.Text -ne $txtConfirm.Text) {
+            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
+            return
+        }
+
+        $currentPin = $txtCurrent.Text
+        $newPin = $txtNew.Text
+
+        Write-Host "Aktueller PIN: $currentPin"
+        Write-Host "Neuer PIN: $newPin"
+
+        try {
+
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = "ykman.exe"
+        $psi.Arguments = "fido access change-pin --pin $currentPin --new-pin $newPin"
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+
+        $process = New-Object System.Diagnostics.Process
+        $process.StartInfo = $psi
+        $process.Start() | Out-Null
+        $process.WaitForExit()
+
+        if ($process.ExitCode -eq 0) {
+
+            [System.Windows.Forms.MessageBox]::Show(
+                "PIN wurde erfolgreich geändert.",
+                "Erfolg",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+
+            $pinForm.Close()
+
+        } else {
+
+            [System.Windows.Forms.MessageBox]::Show(
+                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
+                "Fehler",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            )
+
+        }
+
+    } catch {
+
+        [System.Windows.Forms.MessageBox]::Show(
+            "Fehler beim Ausführen von ykman:`n$_",
+            "Script Fehler",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error
+        )
+
+    }
+    })
+
+    # Cancel Klick
+    $btnCancel.Add_Click({
+        $pinForm.Close()
+    })
+
+    # Controls hinzufügen
+    $pinForm.Controls.AddRange(@(
+        $lblCurrent,$lblNew,$lblConfirm,
+        $txtCurrent,$txtNew,$txtConfirm,
+        $btnOK,$btnCancel
+    ))
+
+    # Fenster anzeigen
+    $pinForm.ShowDialog()
+
+})
 
 
  
- $btnProceed.Add_Click({
+$btnProceed.Add_Click({
     Write-Host "Checking entered data"
-	    $form.Visible = $false
+    $form.Visible = $false
 
     try {
         $tenantId = $textTenantId.Text
         $filePath = $labelFilePath.Text
+        $upnID = $textupn.text
+        $checkfidopresent = (& ".\ykman.exe" list --serials) 
         
         if (-not $tenantId) {
             [System.Windows.Forms.MessageBox]::Show("Please enter a Tenant ID.", "Error")
@@ -611,20 +972,46 @@ $form.Controls.Add($btnProceed)
             return
         }
 
+        if ([string]::IsNullOrWhiteSpace($checkfidopresent) -or $checkfidopresent -eq "None") {
+            [System.Windows.Forms.MessageBox]::Show("Please plug in the first Yubikey.`n`nPlease try again.", "Error")
+            $form.Visible = $true
+            return
+        }    
+
         Set-ItemProperty -Path $regPath -Name "TenantId" -Value $tenantId -Force
 		Write-Host "Connecting to MSGraph"
         Connect-MgGraph -Scopes 'UserAuthenticationMethod.ReadWrite.All' -TenantId $tenantId -NoWelcome
 
-        $upns = Import-Csv $filePath | Select-Object -ExpandProperty UPN
+        # Verify Microsoft Graph authentication and permissions
+        if ($null -eq $(Get-MgContext)) {
+            $form.Visible = $true
+            $outputBox.AppendText("Logon to Microsoft Graph failed. Try again please!`r`n")
+            return
+        }
+
+        if (-not [String]::IsNullOrEmpty($upnID)) {
+                $upns = $upnID
+            }
+            else {
+                $upns = Import-Csv $filePath | Select-Object -ExpandProperty UPN
+            }
+
 		$totalUsers = $upns.Count
 		$currentIndex = 0
+
         foreach ($upn in $upns) {
+            if ($script:UserAction -eq "cancel") {
+                $outputBox.AppendText("Process cancelled by user.`r`n")
+                break
+            }
+        
+
             if (-not $upn) { continue }
 			    $currentIndex++
 
-            # Fetch the serial number using read_serial_t2.exe
+            # Fetch the serial number using ykman.exe
             try {
-                $serialOutput = (& ".\read_serial_t2.exe").Trim()
+                $serialOutput = (& ".\ykman.exe" list --serials)
                 if ([string]::IsNullOrWhiteSpace($serialOutput) -or $serialOutput -eq "None") {
                     [System.Windows.Forms.MessageBox]::Show("No valid serial number detected.`nSkipping.`nPlease prepare next user's key.", "Error")
                     Write-Host "No valid serial number for $upn. Skipping"
@@ -654,7 +1041,13 @@ $form.Controls.Add($btnProceed)
             $serialPopup.Text = "Add Key for $upn"
             $serialPopup.Size = New-Object System.Drawing.Size(400, 200)
             $serialPopup.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-			 
+			$serialPopup.Add_FormClosing({
+
+            if ($_.CloseReason -eq [System.Windows.Forms.CloseReason]::UserClosing -and (-not ($script:UserAction -eq "skip"))) {
+                $script:UserAction = "cancel"
+            }
+            }) 
+
             #$serialPopup.TopMost = $true
 
             $serialLabel = New-Object System.Windows.Forms.Label
@@ -669,58 +1062,64 @@ $form.Controls.Add($btnProceed)
             $infoLabel.Size = New-Object System.Drawing.Size(400, 50)
             $serialPopup.Controls.Add($infoLabel)
 
-			$infoLabel2 = New-Object System.Windows.Forms.Label
-            $infoLabel2.Text = "(Or close this window to skip this user)"
-            $infoLabel2.Location = New-Object System.Drawing.Point(0, 130)
-            $infoLabel2.Size = New-Object System.Drawing.Size(400, 20)
-            $serialPopup.Controls.Add($infoLabel2)
+            $btnSkipKey = New-Object System.Windows.Forms.Button
+            $btnSkipKey.Text = "Skip User"
+            $btnSkipKey.Location = New-Object System.Drawing.Point(100, 100)
+            $serialPopup.Controls.Add($btnSkipKey)
 
             $btnAddKey = New-Object System.Windows.Forms.Button
             $btnAddKey.Text = "Add Key"
             $btnAddKey.Location = New-Object System.Drawing.Point(20, 100)
             $serialPopup.Controls.Add($btnAddKey)
+            
+            $btnSkipKey.Add_Click({
+                $script:UserAction = "skip"
+                $serialPopup.close()
+            })
 
             $btnAddKey.Add_Click({
-                Write-Host "Processing $upn with Serial: $serialOutput"
-
                 try {
+                    
                     if ($randomPin) {
-                        Write-Host "Setting PIN using fido2-manage.exe..."
-                        & ".\fido2-manage.exe" -setPIN -pin $randomPin -device 1
+                        #& "ykman.exe" fido access change-pin --new-pin $randomPin
+        
+                        $process = Start-Process "ykman.exe" `
+                        -ArgumentList "fido access change-pin --new-pin $randomPin" `
+                        -NoNewWindow `
+                        -PassThru
+
+                        # wait max 5 seconds
+                        $completed = $process.WaitForExit(9000)
+
+                        if (-not $completed) {
+                        $process.Kill()
+                        $process.WaitForExit()
+                        $outputBox.AppendText("Pin set timed out. Reset Yubikey first.`r`n")
+                        break
+                        }
                     }
 
-###NOTE   ------------------------------         Passkey registration
-
+                    #Passkey registration
                     Write-Host "Registering passkey for $upn..."
-					<#
-					#I dont think we need this anymore due to Windows Hello being bypassed
-					# Set the initial size of the form
-					$serialPopup.Size = New-Object System.Drawing.Size(900, 100)
+										
 
-					# Get the current position of the form
-					$currentLocation = $serialPopup.Location
-
-					# Move the form 300 pixels to the left
-					$serialPopup.Location = New-Object System.Drawing.Point(($currentLocation.X - 300), $currentLocation.Y)
-#>
-					
-					
                     #Graph-Register-Custom-Passkey -UserId $upn -DisplayName $serialOutput
 					# apparently calling Graph register makes it not yet be aware of some types, dont ask me why, PLEASE!
-					Get-PasskeyRegistrationOptions -UserId $upn | CTAP-Create-Custom-Passkey -DisplayName $serialOutput -pin $randomPin | Graph-Register-Custom-Passkey -UserId $upn
-					
+					Get-PasskeyRegistrationOptions -UserId $upn | CTAP-Create-Custom-Passkey -DisplayName "YubiKey with S/N: $serialOutput" -pin $randomPin | Graph-Register-Custom-Passkey -UserId $upn
+					#Write-Host $serialOutput
 					$serialPopup.Size = New-Object System.Drawing.Size(400, 200)
-					 
-                    Write-Host "Passkey registered successfully for $upn."
+
+                    
+                    #[System.Windows.Forms.MessageBox]::Show("after register ", "Error") 
+                    Write-Host "Passkey registered successfully for $upn with S/N $serialOutput."
 					  
 
                     $forcedPin = $false
                     if ($chkForcePinChange.Checked -and $randomPin) {
-                        Write-Host "Forcing PIN change using fido2-manage.exe..."
-                        & ".\fido2-manage.exe" -forcePINchange -pin $randomPin -device 1
+                        Write-Host "Forcing PIN change using ykman.exe..."
+                        & "ykman.exe" fido access force-change --pin $randomPin
                         $forcedPin = $true
                     }
-
                     # Log the results
                     $logEntry = "$upn,$serialOutput,$randomPin,$forcedPin"
                     if (-not (Test-Path $logFilePath)) {
@@ -730,7 +1129,7 @@ $form.Controls.Add($btnProceed)
                     Write-Host "Logged results for $upn."
 					  # Show MessageBox only if there's a next user
                     if ($currentIndex -lt $totalUsers) {
-                        [System.Windows.Forms.MessageBox]::Show("Prepare the next key and click OK to continue.", 
+                        [System.Windows.Forms.MessageBox]::Show("Prepare the next key for: $($upns[$i + 1]) and click OK to continue.", 
                             "Next Key Prompt", 
                             [System.Windows.Forms.MessageBoxButtons]::OK, 
                             [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -739,9 +1138,7 @@ $form.Controls.Add($btnProceed)
                     }
 	
                 } catch {
-                    Write-Host "Error during provisioning "
                     [System.Windows.Forms.MessageBox]::Show("An error occurred during provisioning ", "Error")
-					throw
                 } finally {
                     # Close the popup
                     $serialPopup.Close()
@@ -750,19 +1147,25 @@ $form.Controls.Add($btnProceed)
 
             $serialPopup.ShowDialog()
         }
+        if ($script:UserAction -eq "cancel" -or -not $completed) {
+           [System.Windows.Forms.MessageBox]::Show("Provisioning cancelled.", "Abort")
+           $form.Visible = $true 
+        }else {
+           [System.Windows.Forms.MessageBox]::Show("Provisioning complete.", "Success")
+		   $form.Visible = $true
+        }
 
-        [System.Windows.Forms.MessageBox]::Show("Provisioning complete.", "Success")
-		 $form.Visible = $true
     } catch {
         Write-Host "An error occurred: $($_)"
         [System.Windows.Forms.MessageBox]::Show("An error occurred: $($_)", "Error")
+    }finally { #autom Logout von Graph
+    Disconnect-MgGraph
+    Write-Host "Disconnected from Microsoft Graph."
     }
+
 })
 
- 
-
 $form.ShowDialog()
-
 
 $form.add_Activated({
     [User32]::SetForegroundWindow([System.Diagnostics.Process]::GetCurrentProcess().MainWindowHandle)

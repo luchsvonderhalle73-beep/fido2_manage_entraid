@@ -1,0 +1,1 @@
+$ous="OU=Kieswerk,OU=Verwaltung,OU=Martin-Baur,DC=martin-baur,DC=local"; $ous | % {Get-ADUser -Filter * -SearchBase $_ -Properties UserPrincipalName | Select -Expand UserPrincipalName} | Out-File C:\temp\users_upn.csv
