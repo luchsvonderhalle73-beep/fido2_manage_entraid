@@ -17,13 +17,8 @@ Additionally this tool also streamlines the process of registering FIDO2 securit
 
 ## Prerequisites
 
-### Required Hardware
-- Compatible **FIDO2.1 key**:
-  - Keys with FIDO2.1 Final firmware are required for setting and forcing PIN changes.
-  - Serial number retrieval is supported only with the **PIN+ series** keys.
-
 ### Required Software
-- **PowerShell**: Version 5.1 or later.
+- **PowerShell**: Version 5.1 or later. (https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-windows?view=powershell-7.6)
 - **Modules**: 
   - `Microsoft.Graph`   (The script will automatically install these modules if not already present.)
   - `DSInternals.PassKeys` (The script will automatically install these modules if not already present.)
