@@ -120,10 +120,9 @@ Handle this log file carefully, as it contains sensitive information such as PIN
 
 ## Troubleshooting
 
-- **No Serial Number Detected**: Ensure the FIDO key is connected properly and try again. Only PIN+ series keys support serial number retrieval.
+- **No Serial Number Detected**: Ensure the FIDO key is connected properly and try again.
 - **Error Connecting to Graph API**: Verify the Tenant ID and ensure the necessary permissions are assigned.
-- **Tool Doesn't Launch**: Confirm required modules are installed and run the script with appropriate permissions.
-- **Tool fails setting the PIN**: On PIN+ Octo Devices, due to the mininum PIN length of 8 digits, the automatic PIN Generation will fail. you can change the non random PIN in the script by changing the sample PIN in the first line to any PIN of your liking, beware of the other [PIN+ rules](https://www.token2.swiss/site/page/token2-fido2-pin-see-the-pin-complexity-in-action).
+- **Tool Doesn't Launch**: Confirm required modules/Powershell 5 or higher are installed and run the script with appropriate permissions.
 
 ## Contact
 
@@ -132,7 +131,5 @@ Out thanks goes out to token2 as this idea was forked off of token2's own Enroll
 In hopes this may find someone in the same situation as us and thinking "Man, we cant be alone with our Issue on the whole world", as we did.
 
 ---
-
-This project partially licensed under the [MIT License](LICENSE), except the **read_serial_t2.exe** utility.
 
 This project uses code sections from the Powershell version of [DSInternals.PassKeys](https://github.com/MichaelGrafnetter/webauthn-interop), under the MIT License for interactions with Microsoft Graph.
