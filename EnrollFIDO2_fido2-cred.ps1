@@ -13,13 +13,17 @@ if (-not $isAdmin) {
     $needsRestart = $true
 }
 if ($needsRestart) {
-    Start-Process pwsh -ArgumentList "-File `"$PSCommandPath`"" -Verb RunAs
+    $arguments = @(
+        "-ExecutionPolicy", "Bypass"
+        "-File", "`"$PSCommandPath`""
+    )
+
+    Start-Process pwsh -ArgumentList $arguments -Verb RunAs
     exit
 }
 
 
 ###region utility functions
-
 ###taken from https://github.com/rmbolger/Posh-ACME/blob/main/Posh-ACME/Private/ConvertTo-Base64Url.ps1 (MIT, Commit 13367d2)
 function ConvertTo-Base64Url {
     [CmdletBinding()]
@@ -500,7 +504,7 @@ $consolePtr = [Win32]::GetConsoleWindow()
 # Create the main form
 $form = New-Object System.Windows.Forms.Form
 
-$form.Text = "FIDO Key Provisioning"
+$form.Text = "FIDO Key Management"
 $form.Size = New-Object System.Drawing.Size(550, 550)
 $form.StartPosition = "CenterScreen"
 
@@ -674,22 +678,23 @@ $labelFilePath.Text="$PSScriptRoot\users.csv"
  ##################           TESTING         ############################
 
 $btnsetpin.Add_Click({
-
+    # Neues Fenster
     $pinForm = New-Object System.Windows.Forms.Form
-    $pinForm.Text = "Set PIN"
+    $pinForm.Text = "PIN setzen"
     $pinForm.Size = New-Object System.Drawing.Size(300,220)
     $pinForm.StartPosition = "CenterScreen"
 
     $lblNew = New-Object System.Windows.Forms.Label
-    $lblNew.Text = "New PIN:"
+    $lblNew.Text = "Neuer PIN:"
     $lblNew.Location = New-Object System.Drawing.Point(10,60)
     $lblNew.AutoSize = $true
 
     $lblConfirm = New-Object System.Windows.Forms.Label
-    $lblConfirm.Text = "Confirm New PIN:"
+    $lblConfirm.Text = "Neuen PIN bestätigen:"
     $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
     $lblConfirm.AutoSize = $true
 
+    # Textfelder
     $txtNew = New-Object System.Windows.Forms.TextBox
     $txtNew.Location = New-Object System.Drawing.Point(150,58)
     $txtNew.Width = 120
@@ -702,27 +707,27 @@ $btnsetpin.Add_Click({
 
     # OK Button
     $btnOK = New-Object System.Windows.Forms.Button
-    $btnOK.Text = "Confirm"
+    $btnOK.Text = "Bestätigen"
     $btnOK.Location = New-Object System.Drawing.Point(50,140)
     $btnOK.Width = 80
 
-    # Cancel Button
+    # Abbrechen Button
     $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Cancel"
+    $btnCancel.Text = "Abbrechen"
     $btnCancel.Location = New-Object System.Drawing.Point(150,140)
     $btnCancel.Width = 80
 
-    # OK Click
+    # OK Klick
     $btnOK.Add_Click({
 
         if ($txtNew.Text -ne $txtConfirm.Text) {
-            [System.Windows.Forms.MessageBox]::Show("The new PINs do not match.","Error")
+            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
             return
         }
 
         $newPin = $txtNew.Text
 
-        Write-Host "New PIN: $newPin"
+        Write-Host "Neuer PIN: $newPin"
 
         try {
 
@@ -742,8 +747,8 @@ $btnsetpin.Add_Click({
         if ($process.ExitCode -eq 0) {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN was successfully set.",
-                "Success",
+                "PIN wurde erfolgreich gesetzt.",
+                "Erfolg",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
@@ -753,8 +758,8 @@ $btnsetpin.Add_Click({
         } else {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN could not be changed.`n`nError:`n$error",
-                "Error",
+                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
+                "Fehler",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
@@ -764,8 +769,8 @@ $btnsetpin.Add_Click({
     } catch {
 
         [System.Windows.Forms.MessageBox]::Show(
-            "Error occurred while executing ykman:`n$_",
-            "Script Error",
+            "Fehler beim Ausführen von ykman:`n$_",
+            "Script Fehler",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         )
@@ -773,7 +778,7 @@ $btnsetpin.Add_Click({
     }
     })
 
-    # Cancel Click
+    # Cancel Klick
     $btnCancel.Add_Click({
         $pinForm.Close()
     })
@@ -817,26 +822,29 @@ $btnreset.Add_Click({
 })
 
 $btnchangepin.Add_Click({
+        # Neues Fenster
     $pinForm = New-Object System.Windows.Forms.Form
-    $pinForm.Text = "Change PIN"
+    $pinForm.Text = "PIN ändern"
     $pinForm.Size = New-Object System.Drawing.Size(300,220)
     $pinForm.StartPosition = "CenterScreen"
 
+    # Labels
     $lblCurrent = New-Object System.Windows.Forms.Label
-    $lblCurrent.Text = "Current PIN:"
+    $lblCurrent.Text = "Aktueller PIN:"
     $lblCurrent.Location = New-Object System.Drawing.Point(10,20)
     $lblCurrent.AutoSize = $true
 
     $lblNew = New-Object System.Windows.Forms.Label
-    $lblNew.Text = "New PIN:"
+    $lblNew.Text = "Neuer PIN:"
     $lblNew.Location = New-Object System.Drawing.Point(10,60)
     $lblNew.AutoSize = $true
 
     $lblConfirm = New-Object System.Windows.Forms.Label
-    $lblConfirm.Text = "Confirm New PIN:"
+    $lblConfirm.Text = "Neuen PIN bestätigen:"
     $lblConfirm.Location = New-Object System.Drawing.Point(10,100)
     $lblConfirm.AutoSize = $true
 
+    # Textfelder
     $txtCurrent = New-Object System.Windows.Forms.TextBox
     $txtCurrent.Location = New-Object System.Drawing.Point(150,18)
     $txtCurrent.Width = 120
@@ -854,29 +862,29 @@ $btnchangepin.Add_Click({
 
     # OK Button
     $btnOK = New-Object System.Windows.Forms.Button
-    $btnOK.Text = "Confirm"
+    $btnOK.Text = "Bestätigen"
     $btnOK.Location = New-Object System.Drawing.Point(50,140)
     $btnOK.Width = 80
 
-    # Cancel Button
+    # Abbrechen Button
     $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Text = "Cancel"
+    $btnCancel.Text = "Abbrechen"
     $btnCancel.Location = New-Object System.Drawing.Point(150,140)
     $btnCancel.Width = 80
 
-    # OK Click
+    # OK Klick
     $btnOK.Add_Click({
 
         if ($txtNew.Text -ne $txtConfirm.Text) {
-            [System.Windows.Forms.MessageBox]::Show("The new PINs do not match.","Error")
+            [System.Windows.Forms.MessageBox]::Show("Die neuen PINs stimmen nicht überein.","Fehler")
             return
         }
 
         $currentPin = $txtCurrent.Text
         $newPin = $txtNew.Text
 
-        Write-Host "Current PIN: $currentPin"
-        Write-Host "New PIN: $newPin"
+        Write-Host "Aktueller PIN: $currentPin"
+        Write-Host "Neuer PIN: $newPin"
 
         try {
 
@@ -896,8 +904,8 @@ $btnchangepin.Add_Click({
         if ($process.ExitCode -eq 0) {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN was successfully changed.",
-                "Success",
+                "PIN wurde erfolgreich geändert.",
+                "Erfolg",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             )
@@ -907,8 +915,8 @@ $btnchangepin.Add_Click({
         } else {
 
             [System.Windows.Forms.MessageBox]::Show(
-                "PIN could not be changed.`n`nError:`n$error",
-                "Error",
+                "PIN konnte nicht geändert werden.`n`nFehler:`n$error",
+                "Fehler",
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             )
@@ -918,8 +926,8 @@ $btnchangepin.Add_Click({
     } catch {
 
         [System.Windows.Forms.MessageBox]::Show(
-            "Error occurred while executing ykman:`n$_",
-            "Script Error",
+            "Fehler beim Ausführen von ykman:`n$_",
+            "Script Fehler",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error
         )
@@ -927,7 +935,7 @@ $btnchangepin.Add_Click({
     }
     })
 
-    # Cancel Click
+    # Cancel Klick
     $btnCancel.Add_Click({
         $pinForm.Close()
     })
@@ -939,7 +947,7 @@ $btnchangepin.Add_Click({
         $btnOK,$btnCancel
     ))
 
-    # Show window
+    # Fenster anzeigen
     $pinForm.ShowDialog()
 
 })
@@ -1076,39 +1084,35 @@ $btnProceed.Add_Click({
             $btnAddKey.Add_Click({
                 try {
                     
-                    if ($randomPin) {
-                        #& "ykman.exe" fido access change-pin --new-pin $randomPin
+                    #& "ykman.exe" fido access change-pin --new-pin $randomPin
         
-                        $process = Start-Process "ykman.exe" `
-                        -ArgumentList "fido access change-pin --new-pin $randomPin" `
-                        -NoNewWindow `
-                        -PassThru
+                    $process = Start-Process "ykman.exe" `
+                    -ArgumentList "fido access change-pin --new-pin $randomPin" `
+                    -NoNewWindow `
+                    -PassThru
 
-                        # wait max 5 seconds
-                        $completed = $process.WaitForExit(9000)
+                    # wait max 5 seconds
+                    $completed = $process.WaitForExit(9000)
 
-                        if (-not $completed) {
-                        $process.Kill()
-                        $process.WaitForExit()
-                        $outputBox.AppendText("Pin set timed out. Reset Yubikey first.`r`n")
-                        break
-                        }
+                    if (-not $completed) {
+                    $process.Kill()
+                    $process.WaitForExit()
+                    [System.Windows.Forms.MessageBox]::Show("Pin set timed out. Reset Yubikey first.`r`n", "Error") 
+                    #$outputBox.AppendText("Pin set timed out. Reset Yubikey first.`r`n")
+                    break
                     }
 
                     #Passkey registration
                     Write-Host "Registering passkey for $upn..."
 										
-
+                    #[System.Windows.Forms.MessageBox]::Show("before register ", "Error") 
                     #Graph-Register-Custom-Passkey -UserId $upn -DisplayName $serialOutput
 					# apparently calling Graph register makes it not yet be aware of some types, dont ask me why, PLEASE!
 					Get-PasskeyRegistrationOptions -UserId $upn | CTAP-Create-Custom-Passkey -DisplayName "YubiKey with S/N: $serialOutput" -pin $randomPin | Graph-Register-Custom-Passkey -UserId $upn
-					#Write-Host $serialOutput
+					
 					$serialPopup.Size = New-Object System.Drawing.Size(400, 200)
 
-                    
-                    #[System.Windows.Forms.MessageBox]::Show("after register ", "Error") 
                     Write-Host "Passkey registered successfully for $upn with S/N $serialOutput."
-					  
 
                     $forcedPin = $false
                     if ($chkForcePinChange.Checked -and $randomPin) {
@@ -1143,18 +1147,14 @@ $btnProceed.Add_Click({
 
             $serialPopup.ShowDialog()
         }
-        if ($script:UserAction -eq "cancel" -or -not $completed) {
-           [System.Windows.Forms.MessageBox]::Show("Provisioning cancelled.", "Abort")
-           $form.Visible = $true 
-        }else {
-           [System.Windows.Forms.MessageBox]::Show("Provisioning complete.", "Success")
-		   $form.Visible = $true
-        }
+        
+        [System.Windows.Forms.MessageBox]::Show("Provisioning complete.", "Success")
+		$form.Visible = $true
 
     } catch {
         Write-Host "An error occurred: $($_)"
         [System.Windows.Forms.MessageBox]::Show("An error occurred: $($_)", "Error")
-    }finally { #autom Logout from Graph
+    }finally { #autom Logout von Graph
     Disconnect-MgGraph
     Write-Host "Disconnected from Microsoft Graph."
     }
