@@ -13,12 +13,20 @@ if (-not $isAdmin) {
     $needsRestart = $true
 }
 if ($needsRestart) {
-    $arguments = @(
+    $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+
+    Start-Process $pwshPath -ArgumentList @(
+        "-NoProfile"
+        "-ExecutionPolicy", "Bypass"
+        "-File", "`"$PSCommandPath`""
+    ) -Verb RunAs
+
+    <#$arguments = @(
         "-ExecutionPolicy", "Bypass"
         "-File", "`"$PSCommandPath`""
     )
+    Start-Process pwsh -ArgumentList $arguments -Verb RunAs#>
 
-    Start-Process pwsh -ArgumentList $arguments -Verb RunAs
     exit
 }
 
