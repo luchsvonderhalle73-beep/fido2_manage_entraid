@@ -13,6 +13,7 @@ if (-not $isAdmin) {
     $needsRestart = $true
 }
 if ($needsRestart) {
+    Read-Host "Press ENTER to restart"
     $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
 
     Start-Process $pwshPath -ArgumentList @(
